@@ -25,10 +25,10 @@ piece_values = {'P': -1, 'N': -3, 'B': -3, 'R': -5, 'Q': -9,
 # all pawn_squares are 0
 pawn_squares = [[0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+                [0.5, 0.5, 1, 1, 1, 1, 0.5, 0.5],
+                [0.5, 0.5, 1, 1, 1, 1, 0.5, 0.5],
+                [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
                 [0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0]]
 
@@ -49,7 +49,7 @@ rook_squares = [[-1, -1, -1, -1, -1, -1, -1, -1],
                 [-1, 0, 1, 2, 2, 1, 0, -1],
                 [-1, 0, 1, 1, 1, 1, 0, -1],
                 [-1, 0, 0, 0, 0, 0, 0, -1],
-                [-1, -1, -1, -1, -1, -1, -1, -1]]
+                [-1, -1, -1, 1, 1, -1, -1, -1]]
 
 # bishops are best on the long diagonals of the board
 bishop_squares = [[2, -1, -1, -1, -1, -1, -1, 2],
@@ -79,7 +79,28 @@ king_squares = [[2, 2, 1, 0.5, 0.5, 1, 2, 2],
                 [0.5, 0, 0, 0, 0, 0, 0, 0.5],
                 [1, 0.5, 0, 0, 0, 0, 0.5, 1],
                 [2, 1, 0.5, 0, 0, 0.5, 1, 2],
-                [2, 2, 1, 0.5, 0.5, 1, 2, 2]]
+                [2, 2, 0.5, 0.5, 0.5, 0.5, 2, 2]]
+
+def letter_to_piece(letter):
+    # convert a letter where P is a white pawn and p is a black pawn
+    # to a unicode character for that piece
+    color = "black" if letter.upper() != letter else "white"
+    piece = None
+    if letter.upper() == "P":
+        piece = "\u2659" if color == "white" else "\u265F"
+    elif letter.upper() == "N":
+        piece = "\u2658" if color == "white" else "\u265E"
+    elif letter.upper() == "B":
+        piece = "\u2657" if color == "white" else "\u265D"
+    elif letter.upper() == "R":
+        piece = "\u2656" if color == "white" else "\u265C"
+    elif letter.upper() == "Q":
+        piece = "\u2655" if color == "white" else "\u265B"
+    elif letter.upper() == "K":
+        piece = "\u2654" if color == "white" else "\u265A"
+    else:
+        return " "
+    return piece
 
 
 def clear(window):
@@ -116,16 +137,10 @@ def draw_pieces(window):
         
         x *= 100
         y *= 100
+
         pygame.draw.circle(window, color, (x + 50, y + 50), 45, 0)
-        # if piece.symbol() == 'P':
-        #     pygame.draw.circle(window, (0, 0, 0), (x + 50, y + 50), 45, 0)
-        # elif piece.symbol() == 'p':
-        #     pygame.draw.circle(window, (255, 255, 255), (x + 50, y + 50), 45, 0)
-        # else:
-        #     pygame.draw.circle(window, (0, 0, 0), (x + 50, y + 50), 35, 0)
-        
-        font = pygame.font.SysFont('comicsans', 30)
-        text = font.render(piece.symbol(), True, ocolor)
+        font = pygame.font.SysFont('segoeuisymbol', 60)
+        text = font.render(letter_to_piece(piece.symbol()), False, ocolor)
         window.blit(text, (x + 50 - text.get_width() // 2, y + 50 - text.get_height() // 2))
     
 
@@ -170,40 +185,49 @@ def make_move(board):
     # use AI to make a move
     # takes in a board and returns a move
     # AI is a simple decided move
-    score, move = minmax(board, 2, 100, -100, True)
+    score, move = minmax(board, 2, .01, -.01, True)
     print(score, move)
     return move
 
-def minmax(board, depth, alpha, beta, maximizing_player):
-    # use minmax to find the best move
-    # depth is the number of moves ahead
-    # alpha and beta are the alpha and beta values
-    # maximizing_player is a boolean
-    # returns a move
-    if depth == 0 or board.is_game_over():
-        return evaluate_board(board, c.BLACK)
-    if maximizing_player:
-        best_score = -math.inf
+def minmax(board, depth, alpha, beta, is_max):
+    # minmax algorithm
+    if depth == 0:
+        return evaluate_board(board, c.BLACK), None
+    if is_max:
+        best_score = 0
+        best_move = None
         for move in board.legal_moves:
             nboard = board.copy()
             nboard.push(move)
-            score = minmax(nboard, depth - 1, alpha, beta, False)
-            best_score = max(score, best_score)
-            alpha = max(alpha, best_score)
-            if beta <= alpha:
+            score, _ = minmax(nboard, depth - 1, alpha, beta, False)
+            if score > best_score or best_move is None:
+                best_score = score
+                best_move = move
+            alpha = max(alpha, score)
+            if beta >= alpha:
+                print("max")
                 break
-        return best_score, move
+        return best_score, best_move
     else:
-        best_score = math.inf
+        best_score = 0
+        best_move = None
         for move in board.legal_moves:
             nboard = board.copy()
             nboard.push(move)
-            score = minmax(nboard, depth - 1, alpha, beta, True)
-            best_score = min(score, best_score)
-            beta = min(beta, best_score)
-            if beta <= alpha:
+            score, _ = minmax(nboard, depth - 1, alpha, beta, True)
+            if score < best_score or best_move is None:
+                best_score = score
+                best_move = move
+            beta = min(beta, score)
+            if beta >= alpha:
+                print("min")
                 break
-        return best_score
+        return best_score, best_move
+
+
+
+
+
 
 def evaluate_board(board, team):
     # board is a chess.Board object
@@ -220,7 +244,7 @@ def evaluate_board(board, team):
     if board.is_game_over():
         if board.is_checkmate():
             # if black is checkmated, return -1
-            if board.turn == c.BLACK:
+            if board.turn == team:
                 # black is checkmated
                 board_score = -1
             else:
@@ -241,7 +265,7 @@ def evaluate_board(board, team):
         pos = get_position(piece)
         symbol = board.piece_map()[piece].symbol().upper()
         sm = 0
-        if board.piece_map()[piece].color == c.BLACK:
+        if board.piece_map()[piece].color == team:
             sm = 1
         else:
             sm = -1
@@ -288,8 +312,10 @@ while(True):
             move = get_notation(from_square) + get_notation(to_square)
             print(move)
             # checks if the inputs squares are legal and if so makes the move
-            if c.Move(c.Square(c.parse_square(move[0] + move[1])), c.Square(c.parse_square(move[2] +move[3]))) in moves:
-                board.push_san(move)
+            move = c.Move(c.Square(c.parse_square(move[0] + move[1])), c.Square(c.parse_square(move[2] + move[3])))
+            if move in moves or c.Move(move.from_square, move.to_square, promotion=c.QUEEN) in moves:
+                move = board.find_move(move.from_square, move.to_square)
+                board.push(move)
                 turn = "c"
                 from_square = None
                 to_square = None
@@ -300,7 +326,7 @@ while(True):
                 continue
             turn = "c"
 
-    if turn == "c":
+    elif turn == "c":
         move = make_move(board)
         print("Computer move: ", move)
         board.push(move)
