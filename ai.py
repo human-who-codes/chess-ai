@@ -295,6 +295,8 @@ def evaluate_board(board, team):
                 board_score += queen_squares[pos[0]][pos[1]] * sm
             elif symbol == 'K':
                 board_score += king_squares[pos[0]][pos[1]] * sm
+        # add .1 to the score for each move that is legal
+        board_score += board.pseudo_legal_moves.count() * .1 * sm
     else: # if we don't have enough pieces, use the piece_score
         # check for how many moves the opponent's king can make
         # add value based on how many moves the king can make
@@ -305,6 +307,7 @@ def evaluate_board(board, team):
                 kmoves += 1   
         board_score += kmoves * 10
         if kmoves == 0 and board.is_check():
+            print(kmoves, oteam, board.is_check());
             board_score = 10000000
     return board_score
 
